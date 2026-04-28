@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>製作說明信產生器</title>
+<title>HTML Email 產生器</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   /* ─── CSS Variables ─────────────────────────────── */
@@ -100,6 +100,91 @@
     margin-bottom: 6px;
     text-transform: uppercase;
   }
+  .field-group select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 9px 12px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239e9890'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 30px;
+  }
+  .field-group select:focus {
+    border-color: var(--accent-soft);
+    background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239e9890'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  /* ─── Prefix Block ───────────────────────────────── */
+  .prefix-block {
+    background: var(--accent-bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 16px 16px;
+    margin-bottom: 0;
+  }
+  .prefix-block-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .prefix-block-tag {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent-soft);
+    border-radius: 2px;
+    padding: 2px 7px;
+    background: rgba(139,115,85,0.06);
+  }
+  .prefix-to-form-gap {
+    height: 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .prefix-to-form-gap::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--border-dark), transparent);
+  }
+
+  /* Prefix preview box */
+  .prefix-preview {
+    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-mid);
+    line-height: 1.7;
+    letter-spacing: 0.04em;
+    margin-top: 10px;
+  }
+  .prefix-preview .preview-placeholder {
+    color: var(--accent-soft);
+  }
+
   .field-group input[type="text"],
   .field-group input[type="date"],
   .field-group input[type="time"],
@@ -388,10 +473,35 @@
   <div class="form-panel">
     <h2>填寫欄位</h2>
 
+    <!-- 信件前綴 Block -->
+    <div class="prefix-block">
+      <div class="prefix-block-header">
+        <span class="prefix-block-tag">信件前綴</span>
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <label>設計師名字</label>
+        <select id="f-designer" onchange="render(); updatePrefixPreview()">
+          <option value="">— 請選擇 —</option>
+          <option value="Joy">Joy</option>
+          <option value="Irene">Irene</option>
+          <option value="Jessica">Jessica</option>
+          <option value="Ann">Ann</option>
+          <option value="Marina">Marina</option>
+          <option value="Edwin">Edwin</option>
+        </select>
+        <div class="prefix-preview" id="prefix-preview">
+          <span class="preview-placeholder">Hi （設計師名字）,</span><br>
+          <span class="preview-placeholder">（客戶名稱）</span>需要請你協助製作，詳細製作內容會再與你說明，謝謝你！
+        </div>
+      </div>
+    </div>
+
+    <div class="prefix-to-form-gap"></div>
+
     <!-- 客戶名稱 -->
     <div class="field-group">
       <label>客戶名稱</label>
-      <input type="text" id="f-client" placeholder="例：ABC 品牌" oninput="render()">
+      <input type="text" id="f-client" placeholder="例：ABC 品牌" oninput="render(); updatePrefixPreview()">
     </div>
 
     <!-- 產品名稱 -->
@@ -600,7 +710,7 @@ function formatTime(timeStr) {
 ══════════════════════════════════════════════ */
 function buildEmailHTML(data) {
   const {
-    client, product, content,
+    designer, client, product, content,
     deliverDate, deliverTime,
     materialURL, materialLabel,
     sales,
@@ -611,6 +721,20 @@ function buildEmailHTML(data) {
   const showDeliver = deliverDate || deliverTime;
   const showMaterial = materialURL;
   const showLaunch = launchDate || launchNote || imageDataURL;
+
+  /* Prefix block */
+  const designerName = designer || '（設計師名字）';
+  const clientName   = client   || '（客戶名稱）';
+  const prefixBlock = `
+        <!-- Prefix greeting -->
+        <tr>
+          <td style="padding:28px 40px 0;">
+            <p style="margin:0;font-family:'Zen Kaku Gothic New','Noto Sans JP',sans-serif;font-size:14px;font-weight:300;color:#2c2a26;line-height:1.9;letter-spacing:0.04em;">
+              Hi ${esc(designerName)},<br>
+              ${esc(clientName)}需要請你協助製作，詳細製作內容會再與你說明，謝謝你！
+            </p>
+          </td>
+        </tr>`;
 
   /* Row builder */
   function row(label, valueHTML) {
@@ -694,9 +818,18 @@ function buildEmailHTML(data) {
           </td>
         </tr>
 
+        ${prefixBlock}
+
+        <!-- Prefix divider -->
+        <tr>
+          <td style="padding:24px 40px 0;">
+            <div style="border-top:1px solid #ede9e2;"></div>
+          </td>
+        </tr>
+
         <!-- Body -->
         <tr>
-          <td style="padding:0 40px;">
+          <td style="padding:4px 40px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               ${tableBody || `<tr><td style="padding:40px 0;text-align:center;color:#9e9890;font-size:12px;letter-spacing:0.1em;">— 尚未填入內容 —</td></tr>`}
             </table>
@@ -794,13 +927,18 @@ function esc(str) {
 ══════════════════════════════════════════════ */
 function buildPlainText(data) {
   const {
-    client, product, content,
+    designer, client, product, content,
     deliverDate, deliverTime,
     materialURL, materialLabel,
     sales, launchDate, launchNote
   } = data;
 
   const lines = [];
+  if (designer || client) {
+    lines.push(`Hi ${designer || '（設計師名字）'},`);
+    lines.push(`${client || '（客戶名稱）'}需要請你協助製作，詳細製作內容會再與你說明，謝謝你！`);
+    lines.push('');
+  }
   lines.push('═══════════════════════════════');
   lines.push('  Project Brief');
   lines.push('═══════════════════════════════');
@@ -829,10 +967,30 @@ function buildPlainText(data) {
 }
 
 /* ══════════════════════════════════════════════
+   Prefix Preview
+══════════════════════════════════════════════ */
+function updatePrefixPreview() {
+  const designer = v('f-designer');
+  const client   = v('f-client');
+  const box = document.getElementById('prefix-preview');
+  if (!box) return;
+
+  const dSpan = designer
+    ? `<strong style="color:var(--text);">${designer}</strong>`
+    : `<span class="preview-placeholder">（設計師名字）</span>`;
+  const cSpan = client
+    ? `<strong style="color:var(--text);">${client}</strong>`
+    : `<span class="preview-placeholder">（客戶名稱）</span>`;
+
+  box.innerHTML = `Hi ${dSpan},<br>${cSpan}需要請你協助製作，詳細製作內容會再與你說明，謝謝你！`;
+}
+
+/* ══════════════════════════════════════════════
    Render
 ══════════════════════════════════════════════ */
 function getData() {
   return {
+    designer:     v('f-designer'),
     client:       v('f-client'),
     product:      v('f-product'),
     content:      v('f-content'),
